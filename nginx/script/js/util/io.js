@@ -1,4 +1,4 @@
-import p from "./parse.js";
+import parse from "./parse.js";
 
 const H = {
   COOKIE: "Set-Cookie",
@@ -6,8 +6,8 @@ const H = {
 };
 
 const CONTENT_TYPE = {
-  TEXT: "text/plain",
-  JSON: "application/json",
+  TEXT: "text/plain;charset=utf-8",
+  JSON: "application/json;charset=utf-8",
   BLOB: "application/octet-stream",
 };
 
@@ -115,7 +115,7 @@ function inJson(r) {
   if (!inTypeJson(r)) {
     return null;
   }
-  return p.stringToJson(inText(r));
+  return parse.stringToJson(inText(r));
 }
 
 function inVar(r, name) {
@@ -126,12 +126,12 @@ function inVarMut(r, name, value) {
   r.variables[name] = value;
 }
 
-function h(fn) {
+function h(f) {
   return async (r) => {
     try {
-      await fn(r);
+      await f(r);
     } catch (e) {
-      outErr(r, e.message);
+      outErr(r, "Internal Error: " + e.message);
     }
   };
 }

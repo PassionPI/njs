@@ -1,3 +1,5 @@
-FROM --platform=linux/amd64 registry.cn-hangzhou.aliyuncs.com/jrjr/nginx:1.27-alpine
+FROM nginx:1.27-alpine
 
-COPY nginx /etc/nginx
+WORKDIR /app
+
+COPY nginx/script /app
