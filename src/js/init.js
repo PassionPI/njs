@@ -13,16 +13,17 @@ const saveFile = (files) => {
   });
 };
 
+const exportKey = (content) =>
+  crypto.subtle
+    .exportKey(content.type === "private" ? "pkcs8" : "spki", content)
+    .then(
+      (data) =>
+        `-----BEGIN ${content.type.toUpperCase()} KEY-----\n${bufferToBase64(
+          data
+        )}\n-----END ${content.type.toUpperCase()} KEY-----`
+    );
+
 const initRsa = async () => {
-  const exportKey = (content) =>
-    crypto.subtle
-      .exportKey(content.type === "private" ? "pkcs8" : "spki", content)
-      .then(
-        (data) =>
-          `-----BEGIN ${content.type.toUpperCase()} KEY-----\n${bufferToBase64(
-            data
-          )}\n-----END ${content.type.toUpperCase()} KEY-----`
-      );
   const keys = await crypto.subtle.generateKey(
     {
       name: "RSA-OAEP",

@@ -16,7 +16,7 @@ const EXP_2D = 2 * DAY;
 const EXP_7D = 7 * DAY;
 const EXP_30D = 30 * DAY;
 
-function fromBearer(r) {
+function getBearer(r) {
   return r.variables.cookie_bearer || "";
 }
 
@@ -46,6 +46,10 @@ async function jwtSign(_claims, exp) {
 }
 
 async function jwtVerify(_token) {
+  if (!_token) {
+    return Error("Invalid token");
+  }
+
   const cryptoKey = await importKey();
 
   const token = _token || "";
@@ -100,20 +104,19 @@ async function _verify(r) {
 }
 
 async function auth(r) {
-  const token = fromBearer(r);
+  const token = getBearer(r);
 
-  if (token == "") {
-    r.return(401);
-    return;
+  const result = await jwtVerify(token);
+
+  if (result instanceof Error) {
+    return io.outUnAuth(r);
   }
 
-  const x = await jwtVerify(token);
-
-  r.return(x instanceof Error ? 401 : 200);
+  io.outText(r, "Ok");
 }
 
 async function ping(r) {
-  const token = fromBearer(r);
+  const token = getBearer(r);
 
   const result = await jwtVerify(token);
 
@@ -139,30 +142,17 @@ async function ping(r) {
   io.outText(r, "Ok");
 }
 
-async function _test(r) {
-  async function hashData(data) {
-    const dataBuffer = parse.stringToBuffer(data);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return hashHex;
-  }
-  const data = await hashData(io.inText(r));
-  io.outText(r, data);
-}
 /**
  * auth: 所有的接口请求验证
  * ping: 首次打开应用的验证, 附带 bearer 的刷新
- * signup: 注册接口, rsa 解码密码, 请求 user 服务注册, 设置 bearer
- * signin: 登录接口, rsa 解码密码, 请求 user 服务验证, 设置 bearer
- * signout: 登出接口, 删除 bearer
+ * user: 注册接口, 成功后 post sign 「post」 「signup」
+ * user: 删除用户接口, 成功后 delete sign「delete」
+ * sign: 登录接口, rsa 解码密码, 请求 user 服务验证, 设置 bearer 「post」 「signin」
+ * sign: 登出接口, 删除 bearer 「delete」 「signout」
  */
 export default {
   auth: io.h(auth),
   ping: io.h(ping),
-  _test,
   _sign,
   _verify,
 };

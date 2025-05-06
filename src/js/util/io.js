@@ -6,8 +6,9 @@ const H = {
 };
 
 const CONTENT_TYPE = {
-  TEXT: "text/plain;charset=utf-8",
-  JSON: "application/json;charset=utf-8",
+  // TEXT: "text/plain;charset=utf-8",
+  TEXT: "text/plain",
+  JSON: "application/json",
   BLOB: "application/octet-stream",
 };
 

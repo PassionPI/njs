@@ -53,6 +53,14 @@ async function rsaDecrypt(text) {
   return crypto.subtle.decrypt(ALGO, pkcs8, text);
 }
 
+async function hex(text) {
+  const dataBuffer = parse.stringToBuffer(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 async function encrypt(r) {
   const txt = io.inText(r);
   const x = await rsaEncrypt(txt);
@@ -65,12 +73,21 @@ async function decrypt(r) {
   io.outText(r, x);
 }
 
+async function hash(r) {
+  const data = await hex(io.inText(r));
+  io.outText(r, data);
+}
+
 function pub(r) {
   io.outText(r, fs.readFileSync(CONST.PUB_PATH));
 }
 
+/**
+ * hash: hash 接口, 用于加密密码
+ */
 export default {
   encrypt: io.h(encrypt),
   decrypt: io.h(decrypt),
+  hash: io.h(hash),
   pub: io.h(pub),
 };
