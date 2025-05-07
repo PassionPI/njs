@@ -1,7 +1,7 @@
 import parse from "./parse.js";
 
 const H = {
-  COOKIE: "Set-Cookie",
+  SET_COOKIE: "Set-Cookie",
   CONTENT_TYPE: "Content-Type",
 };
 
@@ -37,7 +37,9 @@ function isString(s) {
 }
 
 function setCookie(r, ...conf) {
-  r.headersOut[H.COOKIE] = conf.join(";");
+  const temp = r.headersOut[H.SET_COOKIE];
+  const prev = Array.isArray(temp) ? temp : [];
+  r.headersOut[H.SET_COOKIE] = prev.concat(conf.join(";"));
 }
 
 function setContentType(r, type) {

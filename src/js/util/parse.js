@@ -19,7 +19,11 @@ function bufferToString(buffer) {
   return new TextDecoder().decode(buffer);
 }
 function bufferToBase64(buffer) {
-  return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)));
+  return btoa(
+    Array.from(new Uint8Array(buffer), (byte) =>
+      String.fromCodePoint(byte)
+    ).join("")
+  );
 }
 function bufferToBase64url(buffer) {
   return base64ToBase64url(bufferToBase64(buffer));
@@ -42,7 +46,9 @@ function base64urlToString(base64url) {
   return base64ToString(base64urlToBase64(base64url));
 }
 function base64urlToBase64(base64url) {
-  return base64url.replace(/-/g, "+").replace(/_/g, "/");
+  const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+  const remainder = base64.length % 4;
+  return `${base64}${remainder ? "=".repeat(4 - remainder) : ""}`;
 }
 function base64DataUrlToBlob(base64DataUrl) {
   const url = base64DataUrl || "";

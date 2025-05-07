@@ -31,33 +31,48 @@ function importKey() {
 }
 
 async function jwtSign(_claims, exp) {
-  const cryptoKey = await importKey();
-
-  const claims = Object.assign(_claims, { exp: Date.now() + exp });
+  // iss (Issuer): 签发者，标识 JWT 的发行方
+  // sub (Subject): 主题，JWT 所面向的用户
+  // aud (Audience): 接收方，JWT 的预期接收者
+  // nbf (Not Before): 生效时间，指定 JWT 何时开始生效
+  // iat (Issued At): 签发时间，JWT 的创建时间
+  // jti (JWT ID): JWT 的唯一标识符
+  const claims = Object.assign({}, _claims, {
+    iss: "Nx",
+    exp: Date.now() + exp,
+  });
 
   const text = [HEADER, claims]
     .map((x) => JSON.stringify(x))
     .map((x) => parse.stringToBase64url(x))
     .join(".");
 
-  const sign = await crypto.subtle.sign(ALGO, cryptoKey, text);
+  const cryptoKey = await importKey();
+  const signature = await crypto.subtle.sign(
+    ALGO,
+    cryptoKey,
+    parse.stringToBuffer(text)
+  );
 
-  return `${text}.${parse.bufferToBase64url(sign)}`;
+  return `${text}.${parse.bufferToBase64url(signature)}`;
 }
 
-async function jwtVerify(_token) {
-  if (!_token) {
+async function jwtVerify(token) {
+  if (typeof token !== "string") {
     return Error("Invalid token");
   }
 
-  const cryptoKey = await importKey();
-
-  const token = _token || "";
   const parts = token.split(".");
-  const b64Header = parts[0] || "";
-  const b64Claims = parts[1] || "";
-  const b64Signature = parts[2] || "";
 
+  if (parts.length !== 3) {
+    return Error("Invalid token structure");
+  }
+
+  const b64Header = parts[0];
+  const b64Claims = parts[1];
+  const b64Signature = parts[2];
+
+  const cryptoKey = await importKey();
   const validator = await crypto.subtle.verify(
     ALGO,
     cryptoKey,
@@ -70,22 +85,29 @@ async function jwtVerify(_token) {
   }
 
   const claims = parse.stringToJson(parse.base64urlToString(b64Claims));
-  const header = () => parse.stringToJson(parse.base64urlToString(b64Header));
+  // const header = () => parse.stringToJson(parse.base64urlToString(b64Header));
 
   if (claims == null) {
     return Error("Invalid claims");
   }
 
-  if (claims.exp < Date.now()) {
+  const now = Date.now();
+
+  if (claims.exp != null && claims.exp < now) {
     return Error("Token expired");
   }
 
-  return { claims, header };
+  if (claims.nbf != null && claims.nbf > now) {
+    return Error("Token not yet valid");
+  }
+
+  return { claims };
 }
 
 async function _sign(r) {
   const claims = {
-    iss: "nginx",
+    _ui: 2 ** 32,
+    _un: "test",
   };
   const token = await jwtSign(claims, EXP_7D);
 

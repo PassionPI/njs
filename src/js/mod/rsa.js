@@ -6,28 +6,24 @@ const fs = require("fs");
 
 const ALGO = {
   name: "RSA-OAEP",
-};
-const ALGO_CONF = {
-  name: "RSA-OAEP",
   hash: "SHA-256",
 };
 
 function pemToBuf(pem, type) {
-  const pemJoined = pem.toString().split("\n").join("");
-  const pemHeader = `-----BEGIN ${type} KEY-----`;
-  const pemFooter = `-----END ${type} KEY-----`;
-  const pemContents = pemJoined.slice(
-    pemHeader.length,
-    pemJoined.length - pemFooter.length
+  return parse.base64ToBuffer(
+    pem
+      .toString()
+      .replace(`-----BEGIN ${type} KEY-----`, "")
+      .replace(`-----END ${type} KEY-----`, "")
+      .replace(/\s+/g, "")
   );
-  return parse.base64ToBuffer(pemContents);
 }
 
 function getSpki() {
   return crypto.subtle.importKey(
     "spki",
     pemToBuf(fs.readFileSync(CONST.PUB_PATH), "PUBLIC"),
-    ALGO_CONF,
+    ALGO,
     false,
     ["encrypt"]
   );
@@ -37,7 +33,7 @@ function getPkcs8() {
   return crypto.subtle.importKey(
     "pkcs8",
     pemToBuf(fs.readFileSync(CONST.PRI_PATH), "PRIVATE"),
-    ALGO_CONF,
+    ALGO,
     false,
     ["decrypt"]
   );
