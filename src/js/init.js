@@ -52,5 +52,24 @@ const initJwt = async () => {
   saveFile("jwt.key", crypto.getRandomValues(new Uint8Array(128)));
 };
 
+const initJwk = async () => {
+  const keys = await crypto.subtle.generateKey(
+    {
+      name: "RSA-PSS",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    true,
+    ["sign", "verify"]
+  );
+
+  const privateKey = await exportKey(keys.privateKey);
+  const publicKey = await exportKey(keys.publicKey);
+
+  saveFile("jwk.key", privateKey);
+  saveFile("jwk.pub", publicKey);
+};
+
 await initRsa();
-await initJwt();
+await initJwk();

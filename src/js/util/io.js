@@ -102,7 +102,7 @@ function inTypeJson(r) {
 
 function inArgsGet(r, name) {
   const value = r.args[name];
-  return Array.isArray(value) ? value[0] : value;
+  return Array.isArray(value) ? value[value.length - 1] : value;
 }
 
 function inArgsGetAll(r, name) {
@@ -129,15 +129,10 @@ function inVarMut(r, name, value) {
   r.variables[name] = value;
 }
 
-function h(f) {
-  return async (r) => {
-    try {
-      await f(r);
-    } catch (e) {
-      outErr(r, "Internal Error: " + e.message);
-    }
-  };
-}
+const h = (fn) => (r) =>
+  Promise.resolve(r)
+    .then(fn)
+    .catch((e) => outErr(r, e.message));
 
 export default {
   CODE,

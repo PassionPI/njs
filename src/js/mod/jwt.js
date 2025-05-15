@@ -1,32 +1,65 @@
+import fs from "fs";
 import CONST from "../const.js";
 import io from "../util/io.js";
 import parse from "../util/parse.js";
 
-const fs = require("fs");
+// ngx.shared.pub.get("jwk.pub")
+// ngx.shared.pub.set("jwk.pub", "----asdf----")
 
-const ALGO = "HMAC";
-const HEADER = { typ: "JWT", alg: "HS256" };
+const ALGO_IMPORT = {
+  name: "RSA-PSS",
+  hash: "SHA-256",
+};
+const ALGO = {
+  name: ALGO_IMPORT.name,
+  saltLength: 32, // 256 / 8
+};
+const HEADER = { typ: "JWT", alg: "PS256" };
 
-const MINUTE = 60000; // 60 * 1000;
-const HOUR = 3600000; // 60 * 60 * 1000;
-const DAY = 86400000; // 24 * 60 * 60 * 1000;
+const MINUTE = 60; // 60;
+const HOUR = 3600; // 60 * 60;
+const DAY = 86400; // 24 * 60 * 60;
 const EXP_15M = 15 * MINUTE;
 const EXP_1H = 1 * HOUR;
 const EXP_2D = 2 * DAY;
 const EXP_7D = 7 * DAY;
 const EXP_30D = 30 * DAY;
 
+function getNow() {
+  return Math.floor(Date.now() / 1000);
+}
+
 function getBearer(r) {
   return r.variables.cookie_bearer || "";
 }
 
-function importKey() {
+function pemToBuf(pem, type) {
+  return parse.base64ToBuffer(
+    pem
+      .toString()
+      .replace(`-----BEGIN ${type} KEY-----`, "")
+      .replace(`-----END ${type} KEY-----`, "")
+      .replace(/\s+/g, "")
+  );
+}
+
+function getSpki() {
   return crypto.subtle.importKey(
-    "raw",
-    fs.readFileSync(CONST.JWT_PATH),
-    { name: ALGO, hash: "SHA-256" },
+    "spki",
+    pemToBuf(fs.readFileSync(CONST.JWT_PUB_PATH), "PUBLIC"),
+    ALGO_IMPORT,
     false,
-    ["sign", "verify"]
+    ["verify"]
+  );
+}
+
+function getPkcs8() {
+  return crypto.subtle.importKey(
+    "pkcs8",
+    pemToBuf(fs.readFileSync(CONST.JWT_PRI_PATH), "PRIVATE"),
+    ALGO_IMPORT,
+    false,
+    ["sign"]
   );
 }
 
@@ -37,9 +70,10 @@ async function jwtSign(_claims, exp) {
   // nbf (Not Before): 生效时间，指定 JWT 何时开始生效
   // iat (Issued At): 签发时间，JWT 的创建时间
   // jti (JWT ID): JWT 的唯一标识符
+  const now = getNow();
   const claims = Object.assign({}, _claims, {
     iss: "Nx",
-    exp: Date.now() + exp,
+    exp: now + exp,
   });
 
   const text = [HEADER, claims]
@@ -47,7 +81,7 @@ async function jwtSign(_claims, exp) {
     .map((x) => parse.stringToBase64url(x))
     .join(".");
 
-  const cryptoKey = await importKey();
+  const cryptoKey = await getPkcs8();
   const signature = await crypto.subtle.sign(
     ALGO,
     cryptoKey,
@@ -72,7 +106,7 @@ async function jwtVerify(token) {
   const b64Claims = parts[1];
   const b64Signature = parts[2];
 
-  const cryptoKey = await importKey();
+  const cryptoKey = await getSpki();
   const validator = await crypto.subtle.verify(
     ALGO,
     cryptoKey,
@@ -85,13 +119,12 @@ async function jwtVerify(token) {
   }
 
   const claims = parse.stringToJson(parse.base64urlToString(b64Claims));
-  // const header = () => parse.stringToJson(parse.base64urlToString(b64Header));
 
   if (claims == null) {
     return Error("Invalid claims");
   }
 
-  const now = Date.now();
+  const now = getNow();
 
   if (claims.exp != null && claims.exp < now) {
     return Error("Token expired");
@@ -106,7 +139,7 @@ async function jwtVerify(token) {
 
 async function _sign(r) {
   const claims = {
-    _ui: 2 ** 32,
+    _ui: 32,
     _un: "test",
   };
   const token = await jwtSign(claims, EXP_7D);
