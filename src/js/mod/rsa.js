@@ -1,8 +1,7 @@
+import fs from "fs";
 import CONST from "../const.js";
 import io from "../util/io.js";
 import parse from "../util/parse.js";
-
-const fs = require("fs");
 
 const ALGO = {
   name: "RSA-OAEP",
